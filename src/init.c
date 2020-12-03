@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <apr_strings.h>
 
+#include <stdlib.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_thread_proc.h>
@@ -60,7 +61,7 @@ apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
   if (!S7E_PROC_IS_RUNNING(pm->pm_status))
     return S7E_NOT_RUNNING;
 
-  AddCommand cmd = ADD_COMMAND__INIT;
+  CmdAdd cmd = CMD_ADD__INIT;
 
   size_t argv_bytes = 0;
   cmd.n_argv = 0;
@@ -72,32 +73,32 @@ apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
 
   cmd.argv = argv;
 
-  Command c = {
-    PROTOBUF_C_MESSAGE_INIT(&command__descriptor),
-    COMMAND__TYPE_ADD,
+  Msg msg = {
+    PROTOBUF_C_MESSAGE_INIT(&msg__descriptor),
+    MSG__TYPE_CMD_ADD,
     { &cmd }
   };
 
-  unsigned len = command__get_packed_size(&c);
+  unsigned len = msg__get_packed_size(&msg);
   void* buf = malloc(len);
-  command__pack(&c, buf);
+  msg__pack(&msg, buf);
 
-  Command* x = command__unpack(NULL, len, buf);
+  Msg* x = msg__unpack(NULL, len, buf);
 
   switch (x->type_case) {
-    case COMMAND__TYPE_ADD:
+    case MSG__TYPE_CMD_ADD:
       printf("add\n");
-      for (unsigned int i = 0; i < x->add->n_argv; i++) {
-        printf("%d = %s\n", i, x->add->argv[i]);
+      for (unsigned int i = 0; i < x->cmd_add->n_argv; i++) {
+        printf("%d = %s\n", i, x->cmd_add->argv[i]);
       }
       break;
 
-    case COMMAND__TYPE_REMOVE:
+    case MSG__TYPE_CMD_REMOVE:
       printf("remove\n");
       break;
   }
 
-  command__free_unpacked(x, NULL);
+  msg__free_unpacked(x, NULL);
 
   return APR_SUCCESS;
 }

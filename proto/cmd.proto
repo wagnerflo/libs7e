@@ -1,11 +1,21 @@
 syntax = "proto3";
 
-message Command {
-  message Add {
-    repeated string argv = 101;
-  }
+message CmdAdd {
+  repeated string argv = 101;
+}
 
+message CmdRemove {
+  uint32 process = 1;
+}
+
+message ReplyAdd {
+  uint32 process = 1;
+}
+
+message Msg {
   oneof type {
-    Add add = 1;
+    CmdAdd cmd_add = 1;
+    ReplyAdd reply_add = 2;
+    CmdRemove cmd_remove = 3;
   }
 }
