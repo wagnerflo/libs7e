@@ -15,9 +15,10 @@ int main() {
   apr_pool_create(&pool, NULL);
 
   s7e_t* pm = s7e_init(pool);
-  s7e_start(pm);
+  rv = s7e_start(pm);
+  printf("s7e_start() -> %d\n", rv);
   rv = s7e_add_process(pm, cmd);
-  printf("rv=%d\n", rv);
+  printf("s7e_add_process() -> %d\n", rv);
 
   /* while (1) { */
   /*   struct s7e_event* evt = s7e_wait(pool, pm); */

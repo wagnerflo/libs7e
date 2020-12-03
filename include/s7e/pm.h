@@ -16,6 +16,6 @@ struct s7e {
 };
 
 void run_maintenance(int, void*, int);
-void pm_main(s7e_t*);
+apr_status_t pm_main(s7e_t*);
 
 #endif /* S7E_PM_H */

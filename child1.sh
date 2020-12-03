@@ -1,5 +1,5 @@
 #!/bin/sh
-while true; do
-    sleep 5
-    date >> child1.log
-done
+echo child starting >> child1.log
+sleep 2
+date >> child1.log
+echo child exiting >> child1.log

@@ -41,7 +41,7 @@ apr_status_t s7e_start(s7e_t* pm) {
 
   // child
   if (rv == APR_INCHILD) {
-    pm_main(pm);
+    exit(pm_main(pm));
   }
   // error
   else if (rv != APR_INPARENT) {
