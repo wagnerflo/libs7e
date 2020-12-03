@@ -1,0 +1,4 @@
+LIBS7E_1.0 {
+  global: s7e_*;
+  local: *;
+};

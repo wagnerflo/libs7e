@@ -1,0 +1,16 @@
+- init:
+    - shared memory
+    - mutex
+    - command pipe:
+        fcgid_pm_unix.c:519 / https://bit.ly/2JyFJSw
+
+- main supervision and command loop:
+    fcgid_pm_main.c:647 / https://bit.ly/3mtTFMh
+
+- spawning, supervision
+
+- request handler:
+    - find free slot:
+        fcgid_bridge.c:37 / https://bit.ly/2JuNER4
+    - spawn request:
+        fcgid_bridge.c:464 / https://bit.ly/39u9bEa

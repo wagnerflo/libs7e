@@ -1,0 +1,9 @@
+libs7e
+Process management and supervision library.
+Copyright 2020 Florian Wagner <florian@wagner-flo.net>
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+Notably the process management implementation from
+mod_fcgid (https://httpd.apache.org/mod_fcgid/).

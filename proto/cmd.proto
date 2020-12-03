@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message Command {
+  message Add {
+    repeated string argv = 101;
+  }
+
+  oneof type {
+    Add add = 1;
+  }
+}
