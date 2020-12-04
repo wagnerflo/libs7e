@@ -123,10 +123,6 @@ apr_status_t pm_spawn_process(s7e_t* pm) {
 }
 
 apr_status_t pm_main(s7e_t* pm) {
-  // set a special status so we can guard against hooks trying to use
-  // this pm struct to configure/start another process manager
-  pm->pm_status = S7E_PROC_IS_PM;
-
   apr_status_t rv;
 
   rv = pm_setup_signals(pm->pool);

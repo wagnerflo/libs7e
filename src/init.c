@@ -48,16 +48,22 @@ apr_status_t s7e_start(s7e_t* pm) {
   if (rv != APR_SUCCESS)
     return rv;
 
-  apr_file_inherit_set(cmd_child->rd);
-  apr_file_inherit_set(cmd_child->wr);
+  // on fork inherit child pipe, but not parent
+  pipe_inherit_set(cmd_child);
+  pipe_inherit_unset(cmd_parent);
 
   // fork
   rv = apr_proc_fork(&pm->pm_proc, pm->pool);
 
   // child
   if (rv == APR_INCHILD) {
-    // close parent side of command pipe
-    // close_pipe(cmd_parent);
+    // any further children should not inherit the command pipe
+    pipe_inherit_unset(cmd_child);
+
+    // setup p7e handle for parent/process manager use; set a special
+    // status so we can guard against hooks trying to use this handle to
+    // configure/start another process manager
+    pm->pm_status = S7E_PROC_IS_PM;
     pm->cmd_pipe = cmd_child;
 
     // run process manager
@@ -70,10 +76,9 @@ apr_status_t s7e_start(s7e_t* pm) {
   // parent
   else {
     // close child side of command pipe
-    // close_pipe(cmd_child);
-    pm->cmd_pipe = cmd_parent;
+    close_pipe(cmd_child);
 
-    // ...
+    // setup p7e handle for parent use
     pm->pm_status = S7E_PROC_UP;
 
     // ...
