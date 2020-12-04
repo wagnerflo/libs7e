@@ -8,6 +8,8 @@
 
 #include "s7e.h"
 #include "s7e/pm.h"
+#include "s7e/pipe.h"
+#include "s7e/proto.h"
 #include "cmd.pb-c.h"
 
 s7e_t* s7e_init(apr_pool_t* pool) {
@@ -36,11 +38,29 @@ apr_status_t s7e_start(s7e_t* pm) {
   if (S7E_PROC_IS_RUNNING(pm->pm_status))
     return S7E_ALREADY_STARTED;
 
+  apr_status_t rv;
+
+  // create communication pipes
+  pipe_t* cmd_child = apr_pcalloc(pm->pool, sizeof(pipe_t));
+  pipe_t* cmd_parent = apr_pcalloc(pm->pool, sizeof(pipe_t));
+
+  rv = create_pipe_pair(pm->pool, cmd_child, cmd_parent);
+  if (rv != APR_SUCCESS)
+    return rv;
+
+  apr_file_inherit_set(cmd_child->rd);
+  apr_file_inherit_set(cmd_child->wr);
+
   // fork
-  apr_status_t rv = apr_proc_fork(&pm->pm_proc, pm->pool);
+  rv = apr_proc_fork(&pm->pm_proc, pm->pool);
 
   // child
   if (rv == APR_INCHILD) {
+    // close parent side of command pipe
+    // close_pipe(cmd_parent);
+    pm->cmd_pipe = cmd_child;
+
+    // run process manager
     exit(pm_main(pm));
   }
   // error
@@ -49,7 +69,14 @@ apr_status_t s7e_start(s7e_t* pm) {
   }
   // parent
   else {
+    // close child side of command pipe
+    // close_pipe(cmd_child);
+    pm->cmd_pipe = cmd_parent;
+
+    // ...
     pm->pm_status = S7E_PROC_UP;
+
+    // ...
     apr_pool_note_subprocess(pm->pool, &pm->pm_proc, APR_KILL_ONLY_ONCE);
     apr_proc_other_child_register(&pm->pm_proc, run_maintenance, pm, NULL, pm->pool);
   }
@@ -79,26 +106,5 @@ apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
     { &cmd }
   };
 
-  unsigned len = msg__get_packed_size(&msg);
-  void* buf = malloc(len);
-  msg__pack(&msg, buf);
-
-  Msg* x = msg__unpack(NULL, len, buf);
-
-  switch (x->type_case) {
-    case MSG__TYPE_CMD_ADD:
-      printf("add\n");
-      for (unsigned int i = 0; i < x->cmd_add->n_argv; i++) {
-        printf("%d = %s\n", i, x->cmd_add->argv[i]);
-      }
-      break;
-
-    case MSG__TYPE_CMD_REMOVE:
-      printf("remove\n");
-      break;
-  }
-
-  msg__free_unpacked(x, NULL);
-
-  return APR_SUCCESS;
+  return send_to_file((const ProtobufCMessage*) &msg, pm->cmd_pipe->wr);
 }

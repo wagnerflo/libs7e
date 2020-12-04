@@ -1,6 +1,7 @@
 #include "s7e.h"
 #include "s7e/pm.h"
-#include "s7e/selfpipe.h"
+#include "s7e/pipe.h"
+#include "cmd.pb-c.h"
 
 #include <apr_signal.h>
 #include <apr_poll.h>
@@ -8,34 +9,74 @@
 #include <stdio.h>
 #include <apr_strings.h>
 
-static apr_file_t* sig_read = NULL;
-static apr_file_t* sig_write = NULL;
+static pipe_t signal_pipe = { NULL, NULL };
+
+typedef apr_status_t (pm_pollset_handler)
+  (s7e_t*, apr_pool_t*, apr_pollset_t*, const apr_pollfd_t*);
 
 void run_maintenance(int reason, void* data, int status) {
   printf("run_maintenance(%d, ..., %d)\n", reason, status);
 }
 
-
-void pm_signal_handler(int signo) {
-  apr_file_putc(signo, sig_write);
+void signal_to_pipe(int signo) {
+  apr_file_putc(signo, signal_pipe.wr);
 }
 
 apr_status_t pm_setup_signals(apr_pool_t* pool) {
   apr_status_t rv;
 
-  rv = create_selfpipe(pool, &sig_read, &sig_write);
+  rv = create_selfpipe(pool, &signal_pipe);
   if (rv != APR_SUCCESS)
     return rv;
 
-  apr_signal(SIGCHLD, &pm_signal_handler);
-}
-
-void pm_setup_pipe() {
-
+  apr_signal(SIGCHLD, &signal_to_pipe);
 }
 
 apr_status_t pm_setup_fast_status() {
 
+}
+
+apr_status_t pm_handle_signal(
+    s7e_t* pm, apr_pool_t* hpool, apr_pollset_t* pollset, const apr_pollfd_t* pfd) {
+  char ch;
+  apr_file_getc(&ch, pfd->desc.f);
+  printf("signal = %d\n", (int) ch);
+  return APR_SUCCESS;
+}
+
+apr_status_t pm_handle_cmd(
+    s7e_t* pm, apr_pool_t* hpool, apr_pollset_t* pollset, const apr_pollfd_t* pfd) {
+  printf("pm_handle_cmd\n");
+
+  // read message length
+  uint32_t msglen;
+  apr_file_read_full(pfd->desc.f, &msglen, sizeof(uint32_t), NULL);
+  msglen = ntohl(msglen);
+
+  // allocate and fill data buffer
+  uint8_t* msgbuf = apr_palloc(hpool, msglen);
+  apr_file_read_full(pfd->desc.f, msgbuf, msglen, NULL);
+
+  // unpack message
+  Msg* msg = msg__unpack(NULL, msglen, msgbuf);
+
+  switch (msg->type_case) {
+    case MSG__TYPE_CMD_ADD:
+      printf("add\n");
+      for (unsigned int i = 0; i < msg->cmd_add->n_argv; i++) {
+        printf("%d = %s\n", i, msg->cmd_add->argv[i]);
+      }
+      pm_spawn_process(pm);
+      break;
+
+    case MSG__TYPE_CMD_REMOVE:
+      printf("remove\n");
+      break;
+  }
+
+  msg__free_unpacked(msg, NULL);
+
+  return APR_SUCCESS;
 }
 
 apr_status_t pm_spawn_process(s7e_t* pm) {
@@ -49,11 +90,6 @@ apr_status_t pm_spawn_process(s7e_t* pm) {
   apr_proc_create(&proc, cmd[0], cmd, NULL, procattr, pm->pool);
 }
 
-#define POLL_SIGNAL   1
-#define POLL_LISTEN   2
-#define POLL_CMD_PIPE 4
-#define POLL_CMD_SOCK 3
-
 apr_status_t pm_main(s7e_t* pm) {
   // set a special status so we can guard against hooks trying to use
   // this pm struct to configure/start another process manager
@@ -65,41 +101,49 @@ apr_status_t pm_main(s7e_t* pm) {
   if (rv != APR_SUCCESS)
     return rv;
 
-  pm_setup_pipe();
-  pm_setup_fast_status();
-
   // create pollset
   apr_pollset_t* pollset;
-  apr_pollfd_t pfd;
-  apr_pollset_create(&pollset, 1, pm->pool, 0);
+  apr_pollset_create(&pollset, 1, pm->pool, APR_POLLSET_NOCOPY);
 
   // add self pipe read end to pollset
-  pfd.reqevents = APR_POLLIN;
-  pfd.desc_type = APR_POLL_FILE;
-  pfd.desc.f = sig_read;
-  pfd.client_data = (void*) POLL_SIGNAL;
-  apr_pollset_add(pollset, &pfd);
+  apr_pollfd_t pfd_signal = {
+    pm->pool,
+    APR_POLL_FILE,
+    APR_POLLIN,
+    0,
+    { signal_pipe.rd },
+    &pm_handle_signal
+  };
+  apr_pollset_add(pollset, &pfd_signal);
 
-  // add command
-  pm_spawn_process(pm);
+  // add command pipe to pollset
+  apr_pollfd_t pfd_cmd_pipe = {
+    pm->pool,
+    APR_POLL_FILE,
+    APR_POLLIN,
+    0,
+    { pm->cmd_pipe->rd },
+    &pm_handle_cmd
+  };
+  apr_pollset_add(pollset, &pfd_cmd_pipe);
+
+  // prepare memory pool for poll handlers
+  apr_pool_t* hpool;
+  apr_pool_create(&hpool, pm->pool);
 
   // main loop
   apr_int32_t num;
   const apr_pollfd_t* ret_pfd;
-  char ch;
+
   while (1) {
     rv = apr_pollset_poll(pollset, -1, &num, &ret_pfd);
     printf("poll -> rv=%d, num=%d\n", rv, num);
 
     for (int i = 0; i < num; i++) {
       const apr_pollfd_t* p = ret_pfd + i;
-
-      switch ((long) p->client_data) {
-        case POLL_SIGNAL:
-          apr_file_getc(&ch, p->desc.f);
-          printf("signal = %d\n", (int) ch);
-          break;
-      }
+      pm_pollset_handler* handler = (pm_pollset_handler*) p->client_data;
+      rv = handler(pm, hpool, pollset, p);
+      apr_pool_clear(hpool);
     }
   }
 }

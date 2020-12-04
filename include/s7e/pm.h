@@ -2,6 +2,7 @@
 #define S7E_PM_H
 
 #include <stdbool.h>
+#include "s7e/pipe.h"
 
 struct s7e {
     apr_pool_t* pool;
@@ -13,6 +14,9 @@ struct s7e {
     // manager process information
     s7e_proc_status_t pm_status;
     apr_proc_t pm_proc;
+
+    // command pipe
+    pipe_t* cmd_pipe;
 };
 
 void run_maintenance(int, void*, int);
