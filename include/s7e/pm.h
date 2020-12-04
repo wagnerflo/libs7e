@@ -19,7 +19,7 @@ struct s7e {
     pipe_t* cmd_pipe;
 };
 
-void run_maintenance(int, void*, int);
+void pm_maintenance(int, void*, int);
 apr_status_t pm_main(s7e_t*);
 
 #endif /* S7E_PM_H */

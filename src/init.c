@@ -78,7 +78,17 @@ apr_status_t s7e_start(s7e_t* pm) {
 
     // ...
     apr_pool_note_subprocess(pm->pool, &pm->pm_proc, APR_KILL_ONLY_ONCE);
-    apr_proc_other_child_register(&pm->pm_proc, run_maintenance, pm, NULL, pm->pool);
+
+    // This registers a handler for child notification. It'll be called
+    // when either the associated pool is destroy or someone calls one
+    // of apr_proc_other_child_{unregister,child_alert,refresh{,_all}}.
+    //
+    // All httpd mpm modules watch their children and run child_alert
+    // when one dies.
+    //
+    // IMPORTANT: Will this also be called for children that are forked
+    // in {pre,post}_config state? I don't think so.
+    apr_proc_other_child_register(&pm->pm_proc, pm_maintenance, pm, NULL, pm->pool);
   }
 
   return APR_SUCCESS;

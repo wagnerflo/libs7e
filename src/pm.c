@@ -14,8 +14,31 @@ static pipe_t signal_pipe = { NULL, NULL };
 typedef apr_status_t (pm_pollset_handler)
   (s7e_t*, apr_pool_t*, apr_pollset_t*, const apr_pollfd_t*);
 
-void run_maintenance(int reason, void* data, int status) {
-  printf("run_maintenance(%d, ..., %d)\n", reason, status);
+void pm_maintenance(int reason, void* data, int status) {
+  s7e_t* pm = (s7e_t*) data;
+
+  switch (reason) {
+    case APR_OC_REASON_DEATH:
+      printf("pm_maintenance(APR_OC_REASON_DEATH, ...)\n");
+      // apr_proc_other_child_unregister(data);
+      break;
+    case APR_OC_REASON_UNWRITABLE:
+      break;
+    case APR_OC_REASON_RESTART:
+      break;
+
+    // this happens on explicit apr_proc_other_child_unregister(data) as
+    // well as when the pool, this process is register to is destroyed
+    case APR_OC_REASON_UNREGISTER:
+      printf("pm_maintenance(APR_OC_REASON_UNREGISTER, ...)\n");
+      kill(pm->pm_proc.pid, SIGHUP);
+      break;
+
+    case APR_OC_REASON_LOST:
+      break;
+    case APR_OC_REASON_RUNNING:
+      break;
+  }
 }
 
 void signal_to_pipe(int signo) {
@@ -29,6 +52,8 @@ apr_status_t pm_setup_signals(apr_pool_t* pool) {
   if (rv != APR_SUCCESS)
     return rv;
 
+  apr_signal(SIGHUP,  &signal_to_pipe);
+  apr_signal(SIGTERM, &signal_to_pipe);
   apr_signal(SIGCHLD, &signal_to_pipe);
 }
 
@@ -41,6 +66,13 @@ apr_status_t pm_handle_signal(
   char ch;
   apr_file_getc(&ch, pfd->desc.f);
   printf("signal = %d\n", (int) ch);
+
+  switch (ch) {
+    case SIGHUP:
+    case SIGTERM:
+      return S7E_SIGNALED_EXIT;
+  }
+
   return APR_SUCCESS;
 }
 
@@ -132,10 +164,11 @@ apr_status_t pm_main(s7e_t* pm) {
   apr_pool_create(&hpool, pm->pool);
 
   // main loop
+  apr_status_t exit_rv = APR_SUCCESS;
   apr_int32_t num;
   const apr_pollfd_t* ret_pfd;
 
-  while (1) {
+  while (exit_rv == APR_SUCCESS) {
     rv = apr_pollset_poll(pollset, -1, &num, &ret_pfd);
     printf("poll -> rv=%d, num=%d\n", rv, num);
 
@@ -144,6 +177,16 @@ apr_status_t pm_main(s7e_t* pm) {
       pm_pollset_handler* handler = (pm_pollset_handler*) p->client_data;
       rv = handler(pm, hpool, pollset, p);
       apr_pool_clear(hpool);
+
+      if (rv == S7E_SIGNALED_EXIT) {
+        exit_rv = rv;
+        break;
+      }
     }
   }
+
+  // cleanup
+  // ...
+
+  return exit_rv;
 }

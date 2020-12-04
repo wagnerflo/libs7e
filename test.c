@@ -23,8 +23,11 @@ int main() {
   /* while (1) { */
   /*   struct s7e_event* evt = s7e_wait(pool, pm); */
   /* } */
-  apr_sleep(30 * 1000000);
+  apr_sleep(5 * 1000000);
+
+  printf("apr_pool_destroy {\n");
   apr_pool_destroy(pool);
+  printf("}\n");
 
   return 0;
 }
