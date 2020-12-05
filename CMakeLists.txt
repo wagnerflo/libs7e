@@ -16,8 +16,9 @@ add_custom_command(
 )
 
 add_library( s7e SHARED
-    src/init.c
-    src/pm.c
+    src/s7e_init.c
+    src/pm_main.c
+    src/pm_signal.c
     src/pipe.c
     src/proto.c
     src/proto/cmd.pb-c.c

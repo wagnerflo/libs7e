@@ -1,14 +1,17 @@
 #ifndef S7E_PM_H
 #define S7E_PM_H
 
-#include <stdbool.h>
+#include <apr_pools.h>
+#include <apr_poll.h>
+
+#include "s7e.h"
 #include "s7e/pipe.h"
 
 struct s7e {
     apr_pool_t* pool;
 
     // configuration
-    bool fast_status;
+    const char* fs_path;
     s7e_pre_spawn_hook_t* pre_spawn;
 
     // manager process information
@@ -19,7 +22,15 @@ struct s7e {
     pipe_t* cmd_pipe;
 };
 
-void pm_maintenance(int, void*, int);
+typedef struct {
+    s7e_t* shared;
+    apr_pollset_t* pollset;
+    apr_pool_t* handler_pool;
+} s7e_pm_t;
+
+typedef apr_status_t (pm_pollset_handler)(s7e_pm_t*, const apr_pollfd_t*);
+
 apr_status_t pm_main(s7e_t*);
+apr_status_t pm_setup_signals(s7e_pm_t*);
 
 #endif /* S7E_PM_H */

@@ -32,7 +32,7 @@ typedef apr_status_t (s7e_pre_spawn_hook_t)(apr_pool_t*, s7e_t*);
 // manager initialization, configuration, starting
 s7e_t* s7e_init(apr_pool_t*);
 apr_status_t s7e_set_prespawn_hook(s7e_t*, s7e_pre_spawn_hook_t*);
-apr_status_t s7e_enable_fast_status(s7e_t*);
+apr_status_t s7e_enable_fast_status(s7e_t*, const char*);
 apr_status_t s7e_start(s7e_t*);
 
 // process control

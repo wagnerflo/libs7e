@@ -25,14 +25,42 @@ apr_status_t s7e_set_prespawn_hook(s7e_t* pm, s7e_pre_spawn_hook_t* hook) {
   pm->pre_spawn = hook;
 }
 
-apr_status_t s7e_enable_fast_status(s7e_t* pm) {
+apr_status_t s7e_enable_fast_status(s7e_t* pm, const char* fs_path) {
   if (pm->pm_status != S7E_PROC_DOWN)
     return S7E_ALREADY_STARTED;
 
   /* TODO: check if OS supports shm and atomic_store/_load */
 
-  pm->fast_status = 1;
+  pm->fs_path = fs_path;
 }
+
+static void maintain_child(int reason, void* data, int status) {
+  s7e_t* pm = (s7e_t*) data;
+
+  switch (reason) {
+    case APR_OC_REASON_DEATH:
+      printf("pm_maintenance(APR_OC_REASON_DEATH, ...)\n");
+      // apr_proc_other_child_unregister(data);
+      break;
+    case APR_OC_REASON_UNWRITABLE:
+      break;
+    case APR_OC_REASON_RESTART:
+      break;
+
+    // this happens on explicit apr_proc_other_child_unregister(data) as
+    // well as when the pool, this process is register to is destroyed
+    case APR_OC_REASON_UNREGISTER:
+      printf("pm_maintenance(APR_OC_REASON_UNREGISTER, ...)\n");
+      kill(pm->pm_proc.pid, SIGHUP);
+      break;
+
+    case APR_OC_REASON_LOST:
+      break;
+    case APR_OC_REASON_RUNNING:
+      break;
+  }
+}
+
 
 apr_status_t s7e_start(s7e_t* pm) {
   if (S7E_PROC_IS_RUNNING(pm->pm_status))
@@ -44,7 +72,7 @@ apr_status_t s7e_start(s7e_t* pm) {
   pipe_t* cmd_child = apr_pcalloc(pm->pool, sizeof(pipe_t));
   pipe_t* cmd_parent = apr_pcalloc(pm->pool, sizeof(pipe_t));
 
-  rv = create_pipe_pair(pm->pool, cmd_child, cmd_parent);
+  rv = pipe_create_pair(pm->pool, cmd_child, cmd_parent);
   if (rv != APR_SUCCESS)
     return rv;
 
@@ -76,7 +104,8 @@ apr_status_t s7e_start(s7e_t* pm) {
   // parent
   else {
     // close child side of command pipe
-    close_pipe(cmd_child);
+    pipe_close(cmd_child);
+    pm->cmd_pipe = cmd_parent;
 
     // setup p7e handle for parent use
     pm->pm_status = S7E_PROC_UP;
@@ -93,7 +122,7 @@ apr_status_t s7e_start(s7e_t* pm) {
     //
     // IMPORTANT: Will this also be called for children that are forked
     // in {pre,post}_config state? I don't think so.
-    apr_proc_other_child_register(&pm->pm_proc, pm_maintenance, pm, NULL, pm->pool);
+    apr_proc_other_child_register(&pm->pm_proc, maintain_child, pm, NULL, pm->pool);
   }
 
   return APR_SUCCESS;
