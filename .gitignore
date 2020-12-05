@@ -4,3 +4,5 @@ Makefile
 cmake_install.cmake
 libs7e.so
 src/proto/*
+include/s7e/uint_bits.h
+src/uint_bits

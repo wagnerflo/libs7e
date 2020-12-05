@@ -18,7 +18,7 @@ apr_status_t pm_spawn_process(s7e_t* pm) {
   apr_proc_create(&proc, cmd[0], cmd, NULL, procattr, pm->pool);
 }
 
-apr_status_t pm_handle_cmd(s7e_pm_t* pm, const apr_pollfd_t* pfd) {
+apr_status_t pm_handle_cmd(pm_t* pm, const apr_pollfd_t* pfd) {
   printf("pm_handle_cmd\n");
 
   // read message length
@@ -56,7 +56,7 @@ apr_status_t pm_main(s7e_t* shared) {
   apr_status_t rv;
 
   // create process manager handle
-  s7e_pm_t pm = {
+  pm_t pm = {
     shared,
     NULL,
     NULL,

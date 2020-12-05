@@ -10,7 +10,7 @@ static void signal_to_pipe(int signo) {
   apr_file_putc(signo, selfpipe.wr);
 }
 
-static apr_status_t pm_handle_signal(s7e_pm_t* pm, const apr_pollfd_t* pfd) {
+static apr_status_t pm_handle_signal(pm_t* pm, const apr_pollfd_t* pfd) {
   char ch;
   apr_file_getc(&ch, pfd->desc.f);
   printf("signal = %d\n", (int) ch);
@@ -24,7 +24,7 @@ static apr_status_t pm_handle_signal(s7e_pm_t* pm, const apr_pollfd_t* pfd) {
   return APR_SUCCESS;
 }
 
-apr_status_t pm_setup_signals(s7e_pm_t* pm) {
+apr_status_t pm_setup_signals(pm_t* pm) {
   if (selfpipe.rd != NULL || selfpipe.wr != NULL)
     return S7E_SELFPIPE_EXISTS;
 

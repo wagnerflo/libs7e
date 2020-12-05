@@ -9,6 +9,12 @@ pkg_check_modules( PROTOBUFC REQUIRED IMPORTED_TARGET libprotobuf-c )
 find_library ( PROTOBUFC_LIBRARIES_STATIC NAMES libprotobuf-c.a )
 
 add_custom_command(
+    OUTPUT include/s7e/uint_bits.h
+    COMMAND src/uint_bits > include/s7e/uint_bits.h
+    DEPENDS uint_bits
+)
+
+add_custom_command(
     OUTPUT src/proto/cmd.pb-c.c src/proto/cmd.pb-c.h
     COMMAND protoc-c --c_out=../src/proto cmd.proto
     MAIN_DEPENDENCY proto/cmd.proto
@@ -23,6 +29,7 @@ add_library( s7e SHARED
     src/proto.c
     src/proto/cmd.pb-c.c
     src/proto/cmd.pb-c.h
+    include/s7e/uint_bits.h
 )
 set( s7e_VERSION_SCRIPT src/libs7e.ver )
 set_target_properties( s7e PROPERTIES
@@ -44,6 +51,9 @@ target_link_libraries( s7e PUBLIC
 target_link_libraries( s7e PRIVATE
     ${PROTOBUFC_LIBRARIES_STATIC}
 )
+
+add_executable ( uint_bits src/uint_bits.c )
+set_target_properties ( uint_bits PROPERTIES OUTPUT_NAME src/uint_bits )
 
 add_executable ( test test.c )
 target_include_directories ( test PUBLIC include )
