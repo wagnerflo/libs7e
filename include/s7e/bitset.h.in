@@ -4,11 +4,20 @@
 #cmakedefine UINT_BITS @UINT_BITS@
 #cmakedefine HAVE_BUILTIN_CLZ
 
+#include <apr_errno.h>
+#include <apr_pools.h>
+
 typedef struct {
+    unsigned int* words;
+    unsigned int num_words;
+    unsigned int num_bits;
+    unsigned int num_zeros;
+    unsigned int free_word;
 } bitset_t;
 
-apr_status_t bitset_create();
-void bitset_flip(bitset_t*);
-bool bitset_test();
+apr_status_t bitset_create(apr_pool_t*, bitset_t**, unsigned int);
+
+apr_status_t bitset_flip(bitset_t*, unsigned int);
+long bitset_flip_any_zero(bitset_t*);
 
 #endif /* S7E_BITSET_H */

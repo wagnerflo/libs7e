@@ -1,6 +1,9 @@
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <s7e.h>
+#include <s7e/bitset.h>
+
+void print_binary(unsigned int number);
 
 apr_status_t pre_spawn(apr_pool_t* pool, s7e_t* pm) {
 
@@ -20,9 +23,6 @@ int main() {
   rv = s7e_add_process(pm, cmd);
   printf("s7e_add_process() -> %d\n", rv);
 
-  /* while (1) { */
-  /*   struct s7e_event* evt = s7e_wait(pool, pm); */
-  /* } */
   apr_sleep(5 * 1000000);
 
   printf("apr_pool_destroy {\n");

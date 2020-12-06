@@ -23,6 +23,8 @@ apr_status_t s7e_set_prespawn_hook(s7e_t* pm, s7e_pre_spawn_hook_t* hook) {
     return S7E_ALREADY_STARTED;
 
   pm->pre_spawn = hook;
+
+  return APR_SUCCESS;
 }
 
 apr_status_t s7e_enable_fast_status(s7e_t* pm, const char* fs_path) {
@@ -32,6 +34,8 @@ apr_status_t s7e_enable_fast_status(s7e_t* pm, const char* fs_path) {
   /* TODO: check if OS supports shm and atomic_store/_load */
 
   pm->fs_path = fs_path;
+
+  return APR_SUCCESS;
 }
 
 static void maintain_child(int reason, void* data, int status) {
@@ -39,7 +43,7 @@ static void maintain_child(int reason, void* data, int status) {
 
   switch (reason) {
     case APR_OC_REASON_DEATH:
-      printf("pm_maintenance(APR_OC_REASON_DEATH, ...)\n");
+      printf("pm_maintenance(APR_OC_REASON_DEATH, ..., %d)\n", status);
       // apr_proc_other_child_unregister(data);
       break;
     case APR_OC_REASON_UNWRITABLE:
@@ -142,7 +146,7 @@ apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
     cmd.n_argv++;
   }
 
-  cmd.argv = argv;
+  cmd.argv = (char**) argv;
 
   Msg msg = {
     PROTOBUF_C_MESSAGE_INIT(&msg__descriptor),

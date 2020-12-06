@@ -7,15 +7,19 @@
 static pipe_t selfpipe = { NULL, NULL };
 
 static void signal_to_pipe(int signo) {
-  apr_file_putc(signo, selfpipe.wr);
+  //apr_file_putc(signo, selfpipe.wr);
+  apr_file_write_full(selfpipe.wr, &signo, sizeof(int), NULL);
 }
 
-static apr_status_t pm_handle_signal(pm_t* pm, const apr_pollfd_t* pfd) {
-  char ch;
-  apr_file_getc(&ch, pfd->desc.f);
-  printf("signal = %d\n", (int) ch);
+static apr_status_t pm_handle_signal(
+    __attribute__((unused)) pm_t* pm,
+    const apr_pollfd_t* pfd) {
 
-  switch (ch) {
+  int signo;
+  apr_file_read_full(pfd->desc.f, &signo, sizeof(int), NULL);
+  printf("signal = %d\n", signo);
+
+  switch (signo) {
     case SIGHUP:
     case SIGTERM:
       return S7E_SIGNALED_EXIT;

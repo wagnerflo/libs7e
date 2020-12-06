@@ -16,6 +16,8 @@ apr_status_t pm_spawn_process(s7e_t* pm) {
   apr_procattr_cmdtype_set(procattr, APR_PROGRAM);
 
   apr_proc_create(&proc, cmd[0], cmd, NULL, procattr, pm->pool);
+
+  return APR_SUCCESS;
 }
 
 apr_status_t pm_handle_cmd(pm_t* pm, const apr_pollfd_t* pfd) {
@@ -45,6 +47,10 @@ apr_status_t pm_handle_cmd(pm_t* pm, const apr_pollfd_t* pfd) {
     case MSG__TYPE_CMD_REMOVE:
       printf("remove\n");
       break;
+
+    default:
+      printf("BAD\n");
+      break;
   }
 
   msg__free_unpacked(msg, NULL);
@@ -58,6 +64,8 @@ apr_status_t pm_main(s7e_t* shared) {
   // create process manager handle
   pm_t pm = {
     shared,
+    NULL,
+    NULL,
     NULL,
     NULL,
   };
