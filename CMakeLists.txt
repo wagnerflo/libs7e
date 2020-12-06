@@ -10,37 +10,37 @@ pkg_check_modules( PROTOBUFC REQUIRED IMPORTED_TARGET libprotobuf-c )
 find_library ( PROTOBUFC_LIBRARIES_STATIC NAMES libprotobuf-c.a )
 
 # custom checks
-message ( STATUS "Checking for builtin ctz" )
-try_run (
-  HAVE_BUILTIN_CTZ_EXIT HAVE_BUILTIN_CTZ_COMPILED
-  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/builtin_ctz.c
-  CMAKE_FLAGS -DCOMPILE_DEFINITIONS=-Wall\ -Wconversion\ -Werror
-  COMPILE_OUTPUT_VARIABLE HAVE_BUILTIN_CTZ_COMPILE_OUTPUT
-)
-if ( ${HAVE_BUILTIN_CTZ_EXIT} EQUAL 2 )
-  set( HAVE_BUILTIN_CTZ 1 CACHE INTERNAL "Test HAVE_BUILTIN_CTZ" )
-  message ( STATUS "  Found" )
-else ()
-  set( HAVE_BUILTIN_CTZ "" CACHE INTERNAL "Test HAVE_BUILTIN_CTZ" )
-  if ( NOT HAVE_BUILTIN_CTZ_COMPILED )
-    file( APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
-      "Performing SOURCE FILE Test HAVE_BUILTIN_CTZ_EXIT failed with the following output:\n"
-      "${HAVE_BUILTIN_CTZ_COMPILE_OUTPUT}\n" )
-    message ( STATUS "  Error compiling helper" )
-  else ()
-    message ( STATUS "  Wrong result running helper" )
-  endif()
-endif()
-
 message ( STATUS "Determining number of bits in unsigned int" )
 try_run(
   UINT_BITS UINT_BITS_COMPILED
-  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/uint_bits.c
+  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/config.d/uint_bits.c
 )
 if( NOT UINT_BITS_COMPILED )
   message ( FATAL_ERROR "couldn't compile helper" )
 endif()
 message( STATUS "  Found ${UINT_BITS} bits in unsigned int")
+
+message ( STATUS "Checking for builtin clz" )
+try_run (
+  HAVE_BUILTIN_CLZ_EXIT HAVE_BUILTIN_CLZ_COMPILED
+  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/config.d/builtin_clz.c
+  CMAKE_FLAGS -DCOMPILE_DEFINITIONS=-Wall\ -Wconversion\ -Werror\ -DUINT_BITS=${UINT_BITS}
+  COMPILE_OUTPUT_VARIABLE HAVE_BUILTIN_CLZ_COMPILE_OUTPUT
+)
+if ( ${HAVE_BUILTIN_CLZ_EXIT} EQUAL 0 )
+  set( HAVE_BUILTIN_CLZ 1 CACHE INTERNAL "Test HAVE_BUILTIN_CLZ" )
+  message ( STATUS "  Found and working" )
+else ()
+  set( HAVE_BUILTIN_CLZ "" CACHE INTERNAL "Test HAVE_BUILTIN_CLZ" )
+  if ( NOT HAVE_BUILTIN_CLZ_COMPILED )
+    file( APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+      "Performing SOURCE FILE Test HAVE_BUILTIN_CLZ_EXIT failed with the following output:\n"
+      "${HAVE_BUILTIN_CLZ_COMPILE_OUTPUT}\n" )
+    message ( STATUS "  Error compiling helper" )
+  else ()
+    message ( STATUS "  Wrong result running helper" )
+  endif()
+endif()
 
 # generate protobuf header and implementation
 add_custom_command(

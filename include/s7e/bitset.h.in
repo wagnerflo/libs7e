@@ -2,7 +2,7 @@
 #define S7E_BITSET_H
 
 #cmakedefine UINT_BITS @UINT_BITS@
-#cmakedefine HAVE_BUILTIN_CTZ
+#cmakedefine HAVE_BUILTIN_CLZ
 
 typedef struct {
 } bitset_t;
