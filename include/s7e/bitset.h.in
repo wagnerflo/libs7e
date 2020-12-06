@@ -1,0 +1,14 @@
+#ifndef S7E_BITSET_H
+#define S7E_BITSET_H
+
+#cmakedefine UINT_BITS @UINT_BITS@
+#cmakedefine HAVE_BUILTIN_CTZ
+
+typedef struct {
+} bitset_t;
+
+apr_status_t bitset_create();
+void bitset_flip(bitset_t*);
+bool bitset_test();
+
+#endif /* S7E_BITSET_H */
