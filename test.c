@@ -3,8 +3,6 @@
 #include <s7e.h>
 #include <s7e/bitset.h>
 
-void print_binary(unsigned int number);
-
 apr_status_t pre_spawn(apr_pool_t* pool, s7e_t* pm) {
 
 }
@@ -18,6 +16,8 @@ int main() {
   apr_pool_create(&pool, NULL);
 
   s7e_t* pm = s7e_init(pool);
+  rv = s7e_enable_fast_status(pm);
+  printf("s7e_enable_fast_status() -> %d\n", rv);
   rv = s7e_start(pm);
   printf("s7e_start() -> %d\n", rv);
   rv = s7e_add_process(pm, cmd);

@@ -4,4 +4,5 @@ Makefile
 cmake_install.cmake
 libs7e.so
 src/proto/*
+include/s7e.h
 include/s7e/bitset.h

@@ -20,8 +20,9 @@ add_custom_command(
   WORKING_DIRECTORY proto
 )
 
-# generate config header
+# generate config headers
 configure_file ( include/s7e/bitset.h.in include/s7e/bitset.h )
+configure_file ( include/s7e.h.in include/s7e.h )
 
 add_library( s7e SHARED
   src/s7e_init.c

@@ -15,6 +15,8 @@
 #define S7E_SELFPIPE_EXISTS (S7E_START_ERROR + 3)
 #define S7E_SIGNALED_EXIT   (S7E_START_ERROR + 4)
 
+#define S7E_HAS_FAST_STATUS @HAVE_ATOMIC_SHM@
+
 struct s7e;
 
 struct s7e_process;
@@ -31,7 +33,7 @@ typedef apr_status_t (s7e_pre_spawn_hook_t)(apr_pool_t*, s7e_t*);
 // manager initialization, configuration, starting
 s7e_t* s7e_init(apr_pool_t*);
 apr_status_t s7e_set_prespawn_hook(s7e_t*, s7e_pre_spawn_hook_t*);
-apr_status_t s7e_enable_fast_status(s7e_t*, const char*);
+apr_status_t s7e_enable_fast_status(s7e_t*);
 apr_status_t s7e_start(s7e_t*);
 
 // process control

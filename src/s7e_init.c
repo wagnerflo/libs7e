@@ -37,15 +37,16 @@ apr_status_t s7e_set_max_proc(s7e_t* pm, unsigned int mp) {
   return APR_SUCCESS;
 }
 
-apr_status_t s7e_enable_fast_status(s7e_t* pm, const char* fs_path) {
+apr_status_t s7e_enable_fast_status(s7e_t* pm) {
   if (pm->pm_status != S7E_PROC_DOWN)
     return S7E_ALREADY_STARTED;
 
-  /* TODO: check if OS supports shm and atomic_store/_load */
-
-  pm->fs_path = fs_path;
-
+#ifndef S7E_HAS_FAST_STATUS
+  return APR_ENOTIMPL;
+#else
+  pm->fs_shm = (apr_shm_t*) 1;
   return APR_SUCCESS;
+#endif
 }
 
 static void maintain_child(int reason, void* data, int status) {
@@ -75,6 +76,24 @@ static void maintain_child(int reason, void* data, int status) {
   }
 }
 
+static apr_status_t setup_shm(s7e_t* pm) {
+  apr_status_t rv;
+  size_t sz = sizeof(uint32_t) * pm->max_proc;
+
+  rv = apr_shm_create(&pm->fs_shm, sz, NULL, pm->pool);
+  if (rv != APR_SUCCESS)
+    return rv;
+
+  if (apr_shm_size_get(pm->fs_shm) != sz) {
+    apr_shm_destroy(pm->fs_shm);
+    return APR_INCOMPLETE;
+  }
+
+  pm->fs_base = (uint32_t*) apr_shm_baseaddr_get(pm->fs_shm);
+  memset(pm->fs_base, 0, sz);
+
+  return APR_SUCCESS;
+}
 
 apr_status_t s7e_start(s7e_t* pm) {
   if (S7E_PROC_IS_RUNNING(pm->pm_status))
@@ -89,6 +108,10 @@ apr_status_t s7e_start(s7e_t* pm) {
   rv = pipe_create_pair(pm->pool, cmd_child, cmd_parent);
   if (rv != APR_SUCCESS)
     return rv;
+
+  // create shared memory
+  if (pm->fs_shm != NULL)
+    setup_shm(pm);
 
   // on fork inherit child pipe, but not parent
   pipe_inherit_set(cmd_child);

@@ -4,6 +4,7 @@
 #include <apr_hash.h>
 #include <apr_poll.h>
 #include <apr_pools.h>
+#include <apr_shm.h>
 
 #include "s7e.h"
 #include "s7e/pipe.h"
@@ -14,8 +15,11 @@ struct s7e {
 
     // configuration
     unsigned int max_proc;
-    const char* fs_path;
     s7e_pre_spawn_hook_t* pre_spawn;
+
+    // fast status
+    apr_shm_t* fs_shm;
+    uint32_t* fs_base;
 
     // manager process information
     s7e_proc_status_t pm_status;
