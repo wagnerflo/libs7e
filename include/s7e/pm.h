@@ -42,5 +42,6 @@ typedef apr_status_t (pm_pollset_handler)(pm_t*, const apr_pollfd_t*);
 apr_status_t pm_main(s7e_t*);
 apr_status_t pm_setup_signals(pm_t*);
 apr_status_t pm_setup_proctbl(pm_t*);
+apr_status_t pm_setup_cmd(pm_t*);
 
 #endif /* S7E_PM_H */

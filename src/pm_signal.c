@@ -54,7 +54,10 @@ apr_status_t pm_setup_signals(pm_t* pm) {
     { selfpipe.rd },
     &pm_handle_signal
   };
-  apr_pollset_add(pm->pollset, &pfd);
+
+  rv = apr_pollset_add(pm->pollset, &pfd);
+  if (rv != APR_SUCCESS)
+    return rv;
 
   apr_signal(SIGHUP,  &signal_to_pipe);
   apr_signal(SIGTERM, &signal_to_pipe);

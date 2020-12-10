@@ -57,6 +57,7 @@ add_library( s7e SHARED
   src/s7e_init.c
   src/pm_main.c
   src/pm_signal.c
+  src/pm_cmd.c
   src/bitset.c
   src/pipe.c
   src/proto.c
