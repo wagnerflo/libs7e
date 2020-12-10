@@ -28,7 +28,6 @@ typedef int s7e_proc_status_t;
 typedef struct s7e s7e_t;
 typedef apr_status_t (s7e_pre_spawn_hook_t)(apr_pool_t*, s7e_t*);
 
-
 // manager initialization, configuration, starting
 s7e_t* s7e_init(apr_pool_t*);
 apr_status_t s7e_set_prespawn_hook(s7e_t*, s7e_pre_spawn_hook_t*);

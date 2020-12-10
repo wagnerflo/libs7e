@@ -13,6 +13,7 @@ struct s7e {
     apr_pool_t* pool;
 
     // configuration
+    unsigned int max_proc;
     const char* fs_path;
     s7e_pre_spawn_hook_t* pre_spawn;
 
@@ -33,6 +34,7 @@ typedef struct {
     apr_pool_t* handler_pool;
 
     //
+    bitset_t proc_map;
     apr_hash_t* proc_config;
     uint32_t* proc_status;
 } pm_t;

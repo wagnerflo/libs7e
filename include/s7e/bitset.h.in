@@ -15,7 +15,10 @@ typedef struct {
     unsigned int free_word;
 } bitset_t;
 
+#define EMPTY_BITSET { NULL, 0, 0, 0, 0 }
+
 apr_status_t bitset_create(apr_pool_t*, bitset_t**, unsigned int);
+apr_status_t bitset_init(apr_pool_t*, bitset_t*, unsigned int);
 
 apr_status_t bitset_flip(bitset_t*, unsigned int);
 long bitset_flip_any_zero(bitset_t*);

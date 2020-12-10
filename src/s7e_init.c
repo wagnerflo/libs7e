@@ -15,6 +15,7 @@
 s7e_t* s7e_init(apr_pool_t* pool) {
   s7e_t* pm = apr_pcalloc(pool, sizeof(s7e_t));
   pm->pool = pool;
+  pm->max_proc = 2048;
   return pm;
 }
 
@@ -23,6 +24,15 @@ apr_status_t s7e_set_prespawn_hook(s7e_t* pm, s7e_pre_spawn_hook_t* hook) {
     return S7E_ALREADY_STARTED;
 
   pm->pre_spawn = hook;
+
+  return APR_SUCCESS;
+}
+
+apr_status_t s7e_set_max_proc(s7e_t* pm, unsigned int mp) {
+  if (pm->pm_status != S7E_PROC_DOWN)
+    return S7E_ALREADY_STARTED;
+
+  pm->max_proc = mp;
 
   return APR_SUCCESS;
 }

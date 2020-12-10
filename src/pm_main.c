@@ -11,6 +11,7 @@ apr_status_t pm_main(s7e_t* shared) {
     shared,
     NULL,
     NULL,
+    EMPTY_BITSET,
     NULL,
     NULL,
   };
@@ -28,6 +29,11 @@ apr_status_t pm_main(s7e_t* shared) {
 
   // setup command pipe and add to pollset
   rv = pm_setup_cmd(&pm);
+  if (rv != APR_SUCCESS)
+    return rv;
+
+  // setup process management
+  rv = pm_setup_proctbl(&pm);
   if (rv != APR_SUCCESS)
     return rv;
 
