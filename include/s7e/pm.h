@@ -24,7 +24,7 @@ struct s7e {
     // fast status
     bool fs_enabled;
     apr_shm_t* fs_shm;
-    uint32_t* fs_base;
+    s7e_proc_status_t* fs_base;
 
     // manager process information
     s7e_proc_status_t pm_status;
@@ -45,7 +45,6 @@ typedef struct {
     //
     bitset_t proc_map;
     apr_hash_t* proc_config;
-    uint32_t* proc_status;
 } pm_t;
 
 typedef apr_status_t (pm_pollset_handler)(pm_t*, const apr_pollfd_t*);

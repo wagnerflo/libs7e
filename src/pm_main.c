@@ -13,7 +13,6 @@ apr_status_t pm_main(s7e_t* shared) {
     NULL,
     EMPTY_BITSET,
     NULL,
-    NULL,
   };
 
   // create pollset

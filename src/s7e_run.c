@@ -46,7 +46,7 @@ static apr_status_t setup_shm(s7e_t* pm) {
   apr_status_t rv;
   apr_shm_t* shm;
   void* base;
-  size_t sz = sizeof(uint32_t) * pm->max_proc;
+  size_t sz = sizeof(s7e_proc_status_t) * pm->max_proc;
 
   rv = apr_shm_create(&shm, sz, NULL, pm->pool);
   if (rv != APR_SUCCESS)
@@ -61,7 +61,7 @@ static apr_status_t setup_shm(s7e_t* pm) {
   memset(base, 0, sz);
 
   pm->fs_shm = shm;
-  pm->fs_base = (uint32_t*) base;
+  pm->fs_base = (s7e_proc_status_t*) base;
 
   return APR_SUCCESS;
 }

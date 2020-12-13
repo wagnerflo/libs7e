@@ -9,9 +9,9 @@ int main() {
   apr_pool_t* pool;
   apr_shm_t* shm;
   apr_proc_t proc;
-  size_t sz = sizeof(uint32_t) * 32;
+  size_t sz = sizeof(int) * 32;
   void* base = NULL;
-  uint32_t* as_uint32_t = NULL;
+  int* as_int = NULL;
 
   rv = apr_pool_initialize();
   if (rv != APR_SUCCESS)
@@ -33,16 +33,16 @@ int main() {
   if (atomic_is_lock_free(base) != 1)
     return 1;
 
-  as_uint32_t = (uint32_t*) base;
+  as_int = (int*) base;
 
-  if (atomic_is_lock_free(as_uint32_t) != 1)
+  if (atomic_is_lock_free(as_int) != 1)
     return 1;
 
-  for (uint32_t i = 0; i < 32; i++)
-    atomic_store(as_uint32_t + i, 0);
+  for (int i = 0; i < 32; i++)
+    atomic_store(as_int + i, 0);
 
-  for (uint32_t i = 0; i < 32; i++)
-    if (atomic_load(as_uint32_t + i) != 0)
+  for (int i = 0; i < 32; i++)
+    if (atomic_load(as_int + i) != 0)
       return 1;
 
   rv = apr_proc_fork(&proc, pool);
@@ -50,8 +50,8 @@ int main() {
   // child
   if (rv == APR_INCHILD) {
     apr_sleep(100000);
-    for (uint32_t i = 0; i < 32; i++)
-      atomic_store(as_uint32_t + i, i + 100);
+    for (int i = 0; i < 32; i++)
+      atomic_store(as_int + i, i + 100);
   }
   // error
   else if (rv != APR_INPARENT) {
@@ -59,9 +59,9 @@ int main() {
   }
   // parent
   else {
-    uint32_t val;
-    for (uint32_t i = 0; i < 32; i++) {
-      while ((val = atomic_load(as_uint32_t + i)) == 0)
+    int val;
+    for (int i = 0; i < 32; i++) {
+      while ((val = atomic_load(as_int + i)) == 0)
         apr_sleep(10000);
       if (val != i + 100)
         return 1;
