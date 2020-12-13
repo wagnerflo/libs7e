@@ -1,6 +1,9 @@
 #ifndef S7E_PIPE_H
 #define S7E_PIPE_H
 
+#include <apr_pools.h>
+#include <apr_file_io.h>
+
 typedef struct {
     apr_file_t* rd;
     apr_file_t* wr;

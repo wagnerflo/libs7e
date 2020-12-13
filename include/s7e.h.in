@@ -1,7 +1,8 @@
 #ifndef S7E_H
 #define S7E_H
 
-#include <apr_thread_proc.h>
+#include <apr_errno.h>
+#include <apr_pools.h>
 
 #define S7E_PROC_IS_RUNNING(status) (status > 0)
 #define S7E_PROC_UP         1
@@ -19,22 +20,18 @@
 
 struct s7e;
 
-struct s7e_process;
-
-struct s7e_event {
-    unsigned int type;
-    pid_t pid;
-};
-
 typedef int s7e_proc_status_t;
 typedef struct s7e s7e_t;
 typedef apr_status_t (s7e_pre_spawn_hook_t)(apr_pool_t*, s7e_t*);
 
-// manager initialization, configuration, starting
-s7e_t* s7e_init(apr_pool_t*);
+// create and config
+s7e_t* s7e_create(apr_pool_t*);
 apr_status_t s7e_set_prespawn_hook(s7e_t*, s7e_pre_spawn_hook_t*);
 apr_status_t s7e_enable_fast_status(s7e_t*);
+
+// starting and stopping
 apr_status_t s7e_start(s7e_t*);
+apr_status_t s7e_stop(s7e_t*);
 
 // process control
 apr_status_t s7e_add_process(s7e_t*, const char*[]);

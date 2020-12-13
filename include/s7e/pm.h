@@ -1,16 +1,20 @@
 #ifndef S7E_PM_H
 #define S7E_PM_H
 
+#include <stdbool.h>
+
 #include <apr_hash.h>
 #include <apr_poll.h>
 #include <apr_pools.h>
 #include <apr_shm.h>
+#include <apr_thread_proc.h>
 
-#include "s7e.h"
 #include "s7e/pipe.h"
 #include "s7e/bitset.h"
+#include "s7e.h"
 
 struct s7e {
+    apr_pool_t* parent_pool;
     apr_pool_t* pool;
 
     // configuration
@@ -18,6 +22,7 @@ struct s7e {
     s7e_pre_spawn_hook_t* pre_spawn;
 
     // fast status
+    bool fs_enabled;
     apr_shm_t* fs_shm;
     uint32_t* fs_base;
 

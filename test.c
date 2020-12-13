@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <s7e.h>
@@ -15,7 +16,9 @@ int main() {
   apr_pool_initialize();
   apr_pool_create(&pool, NULL);
 
-  s7e_t* pm = s7e_init(pool);
+  s7e_t* pm = s7e_create(pool);
+  if (pm == NULL)
+    return 1;
   rv = s7e_enable_fast_status(pm);
   printf("s7e_enable_fast_status() -> %d\n", rv);
   rv = s7e_start(pm);
@@ -24,6 +27,7 @@ int main() {
   printf("s7e_add_process() -> %d\n", rv);
 
   apr_sleep(5 * 1000000);
+  //s7e_stop(pm);
 
   printf("apr_pool_destroy {\n");
   apr_pool_destroy(pool);

@@ -1,22 +1,13 @@
-#include <stdio.h>
-#include <apr_strings.h>
-
-#include <stdlib.h>
-#include <apr_general.h>
-#include <apr_pools.h>
-#include <apr_thread_proc.h>
-
 #include "s7e.h"
 #include "s7e/pm.h"
-#include "s7e/pipe.h"
-#include "s7e/proto.h"
-#include "cmd.pb-c.h"
 
-s7e_t* s7e_init(apr_pool_t* pool) {
-  s7e_t* pm = apr_pcalloc(pool, sizeof(s7e_t));
-  pm->pool = pool;
-  pm->max_proc = 2048;
-  return pm;
+s7e_t* s7e_create(apr_pool_t* parent) {
+  s7e_t* p = apr_pcalloc(parent, sizeof(s7e_t));
+  if (p == NULL)
+    return NULL;
+  p->parent_pool = parent;
+  p->max_proc = 2048;
+  return p;
 }
 
 apr_status_t s7e_set_prespawn_hook(s7e_t* pm, s7e_pre_spawn_hook_t* hook) {
@@ -28,11 +19,11 @@ apr_status_t s7e_set_prespawn_hook(s7e_t* pm, s7e_pre_spawn_hook_t* hook) {
   return APR_SUCCESS;
 }
 
-apr_status_t s7e_set_max_proc(s7e_t* pm, unsigned int mp) {
+apr_status_t s7e_set_max_proc(s7e_t* pm, unsigned int max_proc) {
   if (pm->pm_status != S7E_PROC_DOWN)
     return S7E_ALREADY_STARTED;
 
-  pm->max_proc = mp;
+  pm->max_proc = max_proc;
 
   return APR_SUCCESS;
 }
@@ -44,148 +35,7 @@ apr_status_t s7e_enable_fast_status(s7e_t* pm) {
 #ifndef S7E_HAS_FAST_STATUS
   return APR_ENOTIMPL;
 #else
-  pm->fs_shm = (apr_shm_t*) 1;
+  pm->fs_enabled = true;
   return APR_SUCCESS;
 #endif
-}
-
-static void maintain_child(int reason, void* data, int status) {
-  s7e_t* pm = (s7e_t*) data;
-
-  switch (reason) {
-    case APR_OC_REASON_DEATH:
-      printf("pm_maintenance(APR_OC_REASON_DEATH, ..., %d)\n", status);
-      // apr_proc_other_child_unregister(data);
-      break;
-    case APR_OC_REASON_UNWRITABLE:
-      break;
-    case APR_OC_REASON_RESTART:
-      break;
-
-    // this happens on explicit apr_proc_other_child_unregister(data) as
-    // well as when the pool, this process is register to is destroyed
-    case APR_OC_REASON_UNREGISTER:
-      printf("pm_maintenance(APR_OC_REASON_UNREGISTER, ...)\n");
-      kill(pm->pm_proc.pid, SIGHUP);
-      break;
-
-    case APR_OC_REASON_LOST:
-      break;
-    case APR_OC_REASON_RUNNING:
-      break;
-  }
-}
-
-static apr_status_t setup_shm(s7e_t* pm) {
-  apr_status_t rv;
-  size_t sz = sizeof(uint32_t) * pm->max_proc;
-
-  rv = apr_shm_create(&pm->fs_shm, sz, NULL, pm->pool);
-  if (rv != APR_SUCCESS)
-    return rv;
-
-  if (apr_shm_size_get(pm->fs_shm) != sz) {
-    apr_shm_destroy(pm->fs_shm);
-    return APR_INCOMPLETE;
-  }
-
-  pm->fs_base = (uint32_t*) apr_shm_baseaddr_get(pm->fs_shm);
-  memset(pm->fs_base, 0, sz);
-
-  return APR_SUCCESS;
-}
-
-apr_status_t s7e_start(s7e_t* pm) {
-  if (S7E_PROC_IS_RUNNING(pm->pm_status))
-    return S7E_ALREADY_STARTED;
-
-  apr_status_t rv;
-
-  // create communication pipes
-  pipe_t* cmd_child = apr_pcalloc(pm->pool, sizeof(pipe_t));
-  pipe_t* cmd_parent = apr_pcalloc(pm->pool, sizeof(pipe_t));
-
-  rv = pipe_create_pair(pm->pool, cmd_child, cmd_parent);
-  if (rv != APR_SUCCESS)
-    return rv;
-
-  // create shared memory
-  if (pm->fs_shm != NULL)
-    setup_shm(pm);
-
-  // on fork inherit child pipe, but not parent
-  pipe_inherit_set(cmd_child);
-  pipe_inherit_unset(cmd_parent);
-
-  // fork
-  rv = apr_proc_fork(&pm->pm_proc, pm->pool);
-
-  // child
-  if (rv == APR_INCHILD) {
-    // any further children should not inherit the command pipe
-    pipe_inherit_unset(cmd_child);
-
-    // setup p7e handle for parent/process manager use; set a special
-    // status so we can guard against hooks trying to use this handle to
-    // configure/start another process manager
-    pm->pm_status = S7E_PROC_IS_PM;
-    pm->cmd_pipe = cmd_child;
-
-    // run process manager
-    exit(pm_main(pm));
-  }
-  // error
-  else if (rv != APR_INPARENT) {
-    return rv;
-  }
-  // parent
-  else {
-    // close child side of command pipe
-    pipe_close(cmd_child);
-    pm->cmd_pipe = cmd_parent;
-
-    // setup p7e handle for parent use
-    pm->pm_status = S7E_PROC_UP;
-
-    // ...
-    apr_pool_note_subprocess(pm->pool, &pm->pm_proc, APR_KILL_ONLY_ONCE);
-
-    // This registers a handler for child notification. It'll be called
-    // when either the associated pool is destroy or someone calls one
-    // of apr_proc_other_child_{unregister,child_alert,refresh{,_all}}.
-    //
-    // All httpd mpm modules watch their children and run child_alert
-    // when one dies.
-    //
-    // IMPORTANT: Will this also be called for children that are forked
-    // in {pre,post}_config state? I don't think so.
-    apr_proc_other_child_register(&pm->pm_proc, maintain_child, pm, NULL, pm->pool);
-  }
-
-  return APR_SUCCESS;
-}
-
-apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
-  if (!S7E_PROC_IS_RUNNING(pm->pm_status))
-    return S7E_NOT_RUNNING;
-
-  CmdAdd cmd = CMD_ADD__INIT;
-
-  size_t argv_bytes = 0;
-  cmd.n_argv = 0;
-
-  for (const char** arg = argv; *arg != NULL; arg++) {
-    argv_bytes += strlen(*arg) + 2;
-    cmd.n_argv++;
-  }
-
-  cmd.argv = (char**) argv;
-
-  Msg msg = {
-    PROTOBUF_C_MESSAGE_INIT(&msg__descriptor),
-    MSG__TYPE_CMD_ADD,
-    { &cmd }
-  };
-
-  return send_to_file((const ProtobufCMessage*) &msg, pm->cmd_pipe->wr);
 }

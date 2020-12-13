@@ -26,6 +26,8 @@ configure_file ( include/s7e.h.in include/s7e.h )
 
 add_library( s7e SHARED
   src/s7e_init.c
+  src/s7e_run.c
+  src/s7e_cmd.c
   src/pm_main.c
   src/pm_cmd.c
   src/pm_proctbl.c
