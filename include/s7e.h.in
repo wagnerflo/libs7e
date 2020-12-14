@@ -4,21 +4,11 @@
 #include <apr_errno.h>
 #include <apr_pools.h>
 
-#define S7E_PROC_IS_RUNNING(status) (status > 0)
-#define S7E_PROC_UP         1
-#define S7E_PROC_DOWN       0
-#define S7E_PROC_STOPPED   -1
-#define S7E_PROC_IS_PM   -100
-
-#define S7E_START_ERROR (APR_OS_START_USERERR + 15000)
-#define S7E_ALREADY_STARTED (S7E_START_ERROR + 1)
-#define S7E_NOT_RUNNING     (S7E_START_ERROR + 2)
-#define S7E_SELFPIPE_EXISTS (S7E_START_ERROR + 3)
-#define S7E_SIGNALED_EXIT   (S7E_START_ERROR + 4)
+#define S7E_START_ERROR  (APR_OS_START_USERERR + 15000)
+#define S7E_SELFPIPE_EXISTS   (S7E_START_ERROR + 1)
+#define S7E_SIGNALED_EXIT     (S7E_START_ERROR + 2)
 
 #define S7E_HAS_FAST_STATUS @HAVE_ATOMIC_SHM@
-
-struct s7e;
 
 typedef int s7e_proc_status_t;
 typedef struct s7e s7e_t;
@@ -32,8 +22,11 @@ apr_status_t s7e_enable_fast_status(s7e_t*);
 // starting and stopping
 apr_status_t s7e_start(s7e_t*);
 apr_status_t s7e_stop(s7e_t*);
+apr_status_t s7e_unmanage(s7e_t*);
+int s7e_is_running(s7e_t*);
 
 // process control
 apr_status_t s7e_add_process(s7e_t*, const char*[]);
+s7e_proc_status_t s7e_get_status(s7e_t*);
 
 #endif /* S7E_H */

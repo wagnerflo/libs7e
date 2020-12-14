@@ -4,8 +4,8 @@
 #include "cmd.pb-c.h"
 
 apr_status_t s7e_add_process(s7e_t* pm, const char* argv[]) {
-  if (!S7E_PROC_IS_RUNNING(pm->pm_status))
-    return S7E_NOT_RUNNING;
+  if (!PARENT_POST_START(pm))
+    return APR_EINVAL;
 
   CmdAdd cmd = CMD_ADD__INIT;
 
