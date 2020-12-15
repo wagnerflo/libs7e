@@ -11,10 +11,15 @@ apr_status_t pre_spawn(apr_pool_t* pool, s7e_t* pm) {
 int main() {
   apr_status_t rv;
   apr_pool_t* pool;
-  const char* cmd[] = { "/home/wagner/p/libs7e/child1.sh", "lol", NULL };
+  const char* cmd[] = { "/home/wagnerflo/coding/libs7e/child1.sh", "lol", NULL };
 
   apr_pool_initialize();
   apr_pool_create(&pool, NULL);
+
+  apr_time_t now = apr_time_now();
+  char* x = apr_pcalloc(pool, APR_RFC822_DATE_LEN * sizeof(char));
+  apr_rfc822_date(x, now);
+  printf("%d %s\n", apr_time_sec(now), x);
 
   s7e_t* pm = s7e_create(pool);
   if (pm == NULL)

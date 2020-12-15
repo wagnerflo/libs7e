@@ -13,6 +13,7 @@ apr_status_t pm_main(s7e_t* shared) {
     NULL,
     EMPTY_BITSET,
     NULL,
+    NULL,
   };
 
   // create pollset
@@ -36,33 +37,38 @@ apr_status_t pm_main(s7e_t* shared) {
   if (rv != APR_SUCCESS)
     return rv;
 
+  rv = pm_setup_actions(&pm);
+  if (rv != APR_SUCCESS)
+    return rv;
+
   // prepare memory pool for poll handlers
   apr_pool_create(&pm.handler_pool, pm.shared->pool);
 
   // main loop
-  apr_status_t exit_rv = APR_SUCCESS;
-  apr_int32_t num;
+  apr_int32_t num_pfd;
   const apr_pollfd_t* ret_pfd;
 
-  while (exit_rv == APR_SUCCESS) {
-    rv = apr_pollset_poll(pm.pollset, -1, &num, &ret_pfd);
-    printf("poll -> rv=%d, num=%d\n", rv, num);
+  while (1) {
+    printf("poll(timeout=%ld)\n", actions_poll_timeout(&pm));
+    rv = apr_pollset_poll(pm.pollset, actions_poll_timeout(&pm),
+                          &num_pfd, &ret_pfd);
 
-    for (int i = 0; i < num; i++) {
-      const apr_pollfd_t* p = ret_pfd + i;
-      pm_pollset_handler* handler = (pm_pollset_handler*) p->client_data;
-      rv = handler(&pm, p);
-      apr_pool_clear(pm.handler_pool);
+    for (int i = 0; i < num_pfd; i++) {
+      const apr_pollfd_t* pfd = ret_pfd + i;
+      pm_pollset_handler* handler = (pm_pollset_handler*) pfd->client_data;
+      rv = handler(&pm, pfd);
 
-      if (rv == S7E_SIGNALED_EXIT) {
-        exit_rv = rv;
-        break;
-      }
+      if (rv == S7E_SIGNALED_EXIT)
+        return rv;
     }
+
+    rv = actions_handle_current(&pm, pm.handler_pool);
+    if (rv == S7E_SIGNALED_EXIT)
+      return rv;
+
+    apr_pool_clear(pm.handler_pool);
   }
 
-  // cleanup
-  // ...
-
-  return exit_rv;
+  // should never be reached
+  return APR_EGENERAL;
 }

@@ -5,7 +5,7 @@
 #define BIT_OFFSET(bit) (bit % UINT_BITS)
 
 apr_status_t bitset_create(apr_pool_t* pool, bitset_t** bitset, unsigned int bits) {
-  if (bits == 0)
+  if (bits == 0 || bits == UINT_MAX)
     return APR_EINVAL;
 
   bitset_t* b = apr_pcalloc(pool, sizeof(bitset_t));
@@ -42,21 +42,41 @@ apr_status_t bitset_init(apr_pool_t* pool, bitset_t* bitset, unsigned int bits) 
   return APR_SUCCESS;
 }
 
-apr_status_t bitset_flip(bitset_t* bitset, unsigned int bit) {
+static apr_status_t bitset_change(bitset_t* bitset, unsigned int bit, int val) {
   if (bit > bitset->num_bits)
     return APR_EINVAL;
 
   unsigned int word = bitset->words[WORD_OFFSET(bit)];
   unsigned int shift = UINT(1) << BIT_OFFSET(bit);
 
-  if (word & shift)
-    bitset->num_zeros++;
-  else
-    bitset->num_zeros--;
-
-  bitset->words[WORD_OFFSET(bit)] = word ^ shift;
+  // bit is set
+  if (word & shift) {
+    if (val >= 0) {
+      bitset->num_zeros++;
+      bitset->words[WORD_OFFSET(bit)] = word ^ shift;
+    }
+  }
+  // bit is not set
+  else {
+    if (val <= 0) {
+      bitset->num_zeros--;
+      bitset->words[WORD_OFFSET(bit)] = word ^ shift;
+    }
+  }
 
   return APR_SUCCESS;
+}
+
+apr_status_t bitset_set(bitset_t* bitset, unsigned int bit) {
+  return bitset_change(bitset, bit,  1);
+}
+
+apr_status_t bitset_unset(bitset_t* bitset, unsigned int bit) {
+  return bitset_change(bitset, bit, -1);
+}
+
+apr_status_t bitset_flip(bitset_t* bitset, unsigned int bit) {
+  return bitset_change(bitset, bit,  0);
 }
 
 #ifdef HAVE_BUILTIN_CLZ
@@ -76,9 +96,9 @@ static int clz(uint32_t v) {
 }
 #endif
 
-long bitset_flip_any_zero(bitset_t* bitset) {
+unsigned int bitset_flip_any_zero(bitset_t* bitset) {
   if (bitset->num_zeros == 0)
-    return -1;
+    return UINT_MAX;
 
   while(bitset->words[bitset->free_word] == UINT_MAX) {
     if (++bitset->free_word == bitset->num_words)

@@ -90,8 +90,13 @@ apr_status_t detach_shm(void* data) {
 apr_status_t reset_parent(void* data) {
   s7e_t* pm = (s7e_t*) data;
   printf("reset_parent\n");
+
+  apr_proc_kill(pm->pm_proc, SIGTERM);
+  apr_proc_wait(pm->pm_proc, NULL, NULL, APR_WAIT);
+
   pm->status = pm->status &~ PM_IS_UP;
   pm->cmd_pipe = NULL;
+
   return APR_SUCCESS;
 }
 
@@ -171,8 +176,13 @@ apr_status_t s7e_start(s7e_t* pm) {
     pm->status |= PM_IS_CHILD | PM_IS_UP;
     pm->cmd_pipe = cmd_child;
 
+    // don't destroy shm in child
+    apr_pool_cleanup_kill(pm->pool, pm, destroy_shm);
+
     // run process manager
-    exit(pm_main(pm));
+    int status = pm_main(pm);
+    apr_pool_destroy(pm->pool);
+    exit(status);
   }
   // error
   else if (rv != APR_INPARENT) {

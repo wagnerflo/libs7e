@@ -29,9 +29,6 @@ static apr_status_t pm_handle_signal(
 }
 
 apr_status_t pm_setup_signals(pm_t* pm) {
-  if (selfpipe.rd != NULL || selfpipe.wr != NULL)
-    return S7E_SELFPIPE_EXISTS;
-
   apr_status_t rv;
 
   // create self-pipe
