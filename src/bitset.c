@@ -51,14 +51,14 @@ static apr_status_t bitset_change(bitset_t* bitset, unsigned int bit, int val) {
 
   // bit is set
   if (word & shift) {
-    if (val >= 0) {
+    if (val <= 0) {
       bitset->num_zeros++;
       bitset->words[WORD_OFFSET(bit)] = word ^ shift;
     }
   }
   // bit is not set
   else {
-    if (val <= 0) {
+    if (val >= 0) {
       bitset->num_zeros--;
       bitset->words[WORD_OFFSET(bit)] = word ^ shift;
     }
